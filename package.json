@@ -1,0 +1,19 @@
+{
+  "name": "troila-mobie-tools",
+  "version": "1.0.0",
+  "description": "卓朗科技移动开发工具类",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/troila-mobile/troila-mobie-tools.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/troila-mobile/troila-mobie-tools/issues"
+  },
+  "homepage": "https://github.com/troila-mobile/troila-mobie-tools#readme"
+}
