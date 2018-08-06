@@ -189,6 +189,14 @@ export default class FetchDataModule {
         } else {
             return res.json()
                 .then(res => {
+                    if (API_URL[apiName].log) {
+                        console.log('************ 请求结果 start ************')
+                        console.log('接口定义信息')
+                        console.log(API_URL[apiName])
+                        console.log('接口返回数据');
+                        console.log(res)
+                        console.log('************ 请求结果 end ************')
+                    }
                     return new Promise((resolve, reject) => {
                         if (res.errcode != -999) {
                             resolve(res);
