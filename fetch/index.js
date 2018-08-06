@@ -154,7 +154,7 @@ export default class FetchDataModule {
             hideLoading()
         }
 
-        if (res.headers.map["content-type"][0] != `application/json;charset=UTF-8`) {
+        if (res.headers.map["content-type"][0].indexOf(`application/json`) === -1) {
             if (env.showNetWorkErrorInfo) {
                 res.text()
                     .then(err => {
