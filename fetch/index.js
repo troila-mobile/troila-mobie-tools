@@ -88,15 +88,19 @@ export default class FetchDataModule {
             fetchUrl,
             mockFetchUrl,
         } = API_URL[apiName]
-        return fetch(mock ? mockFetchUrl : fetchUrl + "?" + toQueryString(params), {
+        const fetchHeaders = Object.assign({}, mock ? {} : getHeadersFunc(), { "Content-Type": "application/x-www-form-urlencoded" }, headers)
+        const fetchParams = toQueryString(params)
+        return fetch(mock ? mockFetchUrl : fetchUrl + "?" + fetchParams, {
             method: "GET",
-            headers: Object.assign({}, mock ? {} : getHeadersFunc(), { "Content-Type": "application/x-www-form-urlencoded" }, headers),
+            headers: fetchHeaders,
         })
             .then(res => {
                 return this.HandleRequestResults({
                     res,
                     apiName,
-                    params
+                    params,
+                    fetchHeaders,
+                    fetchParams,
                 })
             })
     }
@@ -114,18 +118,22 @@ export default class FetchDataModule {
             fetchUrl,
             mockFetchUrl,
         } = API_URL[apiName]
+        const fetchHeaders = Object.assign({}, mock ? {} : getHeadersFunc(), { "Content-Type": "application/x-www-form-urlencoded" }, headers)
+        const fetchParams = toQueryString(params)
         return fetch(mock ? mockFetchUrl : fetchUrl, {
             method: "POST",
             // headers: Object.assign({}, mock ? {} : getHeadersFunc(), { "Content-Type": "application/json" }, headers),
             // body: JSON.stringify(params),
-            headers: Object.assign({}, mock ? {} : getHeadersFunc(), { "Content-Type": "application/x-www-form-urlencoded" }, headers),
-            body: toQueryString(params)
+            headers: fetchHeaders,
+            body: fetchParams
         })
             .then(res => {
                 return this.HandleRequestResults({
                     res,
                     apiName,
-                    params
+                    params,
+                    fetchHeaders,
+                    fetchParams,
                 })
             })
 
@@ -136,7 +144,7 @@ export default class FetchDataModule {
      *  res.headers.map['content-type'][0]                      非debug
      *  res._bodyBlob.type                                      debug
     */
-    static HandleRequestResults({ res, apiName, params }) {
+    static HandleRequestResults({ res, apiName, params, fetchHeaders, fetchParams }) {
 
         const {
             API_URL,
@@ -155,9 +163,9 @@ export default class FetchDataModule {
         }
 
         if (res.headers.map["content-type"][0].indexOf(`application/json`) === -1) {
-            if (env.showNetWorkErrorInfo) {
-                res.text()
-                    .then(err => {
+            res.text()
+                .then(err => {
+                    if (env.showNetWorkErrorInfo) {
                         setTimeout(() => {
                             Alert.alert(
                                 "接口请求错误", `接口名:${API_URL[apiName].apiUrl}`,
@@ -168,7 +176,7 @@ export default class FetchDataModule {
                                             this.ErrorApiFetch({
                                                 apiName,
                                                 errmsg: err,
-                                                params
+                                                params,
                                             })
                                         }
                                     },
@@ -177,34 +185,38 @@ export default class FetchDataModule {
                                 ]
                             );
                         }, API_URL[apiName].showLoading ? 1000 : 1)
-                    });
-            }
-            if (env.defaultUploadNetWorkErrorInfo) {
-                ToastError("捕获到服务器返回数据类型异常，正在自动提交错误信息");
-                res.text().then(e => {
-                    this.ErrorApiFetch({ apiName, errmsg: e, params })
+                    }
+                    if (env.defaultUploadNetWorkErrorInfo) {
+                        ToastError("捕获到服务器返回数据类型异常，正在自动提交错误信息");
+                        this.ErrorApiFetch({ apiName, errmsg: err, params })
+                    }
+                    if (API_URL[apiName].log) {
+                        this.Log({
+                            apiName,
+                            success: false,
+                            response: res,
+                            error: err,
+                            fetchHeaders,
+                            fetchParams
+                        })
+                    }
                 });
-            }
             return new Promise((resolve, reject) => { reject() })
         } else {
             return res.json()
-                .then(res => {
+                .then(result => {
                     if (API_URL[apiName].log) {
-                        console.log('************ 请求结果 start ************')
-                        console.log('接口定义信息')
-                        console.log(API_URL[apiName])
-                        console.log('接口返回数据');
-                        console.log(res)
-                        console.log('************ 请求结果 end ************')
+                        this.Log({
+                            apiName,
+                            success: true,
+                            response: res,
+                            result,
+                            fetchHeaders,
+                            fetchParams
+                        })
                     }
                     return new Promise((resolve, reject) => {
-                        if (res.errcode != -999) {
-                            resolve(res);
-                        } else {
-                            reject(res)
-                            ToastError("token验证异常，请重新登录");
-                            removeUserInfoFunc()
-                        }
+                        resolve(result);
                     });
                 })
         }
@@ -301,6 +313,31 @@ export default class FetchDataModule {
                         })
                 }
             })
+    }
+    /*
+     *  输出日志
+    */
+    static Log({ apiName, success, response, result, error, fetchHeaders, fetchParams }) {
+        const {
+            API_URL,
+        } = libraryConfig
+        console.log('************ 请求结果 start ************')
+        console.log('接口定义信息')
+        console.log(API_URL[apiName])
+        console.log('请求头部')
+        console.log(fetchHeaders)
+        console.log('请求参数')
+        console.log(fetchParams)
+        console.log('接口响应结果');
+        console.log(response)
+        if (success) {
+            console.log('接口返回数据');
+            console.log(result)
+        } else {
+            console.log('接口返回错误');
+            console.log(error)
+        }
+        console.log('************ 请求结果 end ************')
     }
 }
 
