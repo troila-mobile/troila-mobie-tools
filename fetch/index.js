@@ -82,6 +82,7 @@ export default class FetchDataModule {
         const {
             API_URL,
             getHeadersFunc,
+            requestTimeout,
         } = libraryConfig
         const {
             mock,
@@ -90,10 +91,15 @@ export default class FetchDataModule {
         } = API_URL[apiName]
         const fetchHeaders = Object.assign({}, mock ? {} : getHeadersFunc(), { "Content-Type": "application/x-www-form-urlencoded" }, headers)
         const fetchParams = toQueryString(params)
-        return fetch(mock ? mockFetchUrl : fetchUrl + "?" + fetchParams, {
-            method: "GET",
-            headers: fetchHeaders,
-        })
+        return fetchFix(
+            fetch(mock ? mockFetchUrl : fetchUrl + "?" + fetchParams, {
+                method: "GET",
+                headers: fetchHeaders,
+            }),
+            {
+                timeout: requestTimeout,
+            }
+        )
             .then(res => {
                 return this.HandleRequestResults({
                     res,
@@ -112,6 +118,7 @@ export default class FetchDataModule {
         const {
             API_URL,
             getHeadersFunc,
+            requestTimeout,
         } = libraryConfig
         const {
             mock,
@@ -120,13 +127,17 @@ export default class FetchDataModule {
         } = API_URL[apiName]
         const fetchHeaders = Object.assign({}, mock ? {} : getHeadersFunc(), { "Content-Type": "application/x-www-form-urlencoded" }, headers)
         const fetchParams = toQueryString(params)
-        return fetch(mock ? mockFetchUrl : fetchUrl, {
-            method: "POST",
-            // headers: Object.assign({}, mock ? {} : getHeadersFunc(), { "Content-Type": "application/json" }, headers),
-            // body: JSON.stringify(params),
-            headers: fetchHeaders,
-            body: fetchParams
-        })
+        return fetchFix(
+            fetch(mock ? mockFetchUrl : fetchUrl, {
+                method: "POST",
+                // headers: Object.assign({}, mock ? {} : getHeadersFunc(), { "Content-Type": "application/json" }, headers),
+                // body: JSON.stringify(params),
+                headers: fetchHeaders,
+                body: fetchParams
+            }), {
+                timeout: requestTimeout
+            }
+        )
             .then(res => {
                 return this.HandleRequestResults({
                     res,
@@ -357,6 +368,15 @@ const developerVerification = ({ developerName, developer, ToastError }) => {
     }
 }
 
+const fetchFix = (fetch, { timeout }) => {
+    return Promise.race([
+        fetch,
+        new Promise((resolve, reject) => {
+            setTimeout(() => reject(new Error('request timeout')), timeout);
+        })
+    ]);
+}
+
 function toQueryString(obj) {
     return obj
         ? Object.keys(obj)
@@ -373,7 +393,7 @@ function toQueryString(obj) {
                         })
                         .join("&");
                 }
-                if (val) {
+                if (val!==null&&val!==undefined) {
                     return encodeURIComponent(key) +
                         "=" +
                         encodeURIComponent(val);
